@@ -1,0 +1,228 @@
+﻿@using System.Data.SqlClient
+@using Global5.Controllers.Configuration
+@using System.Data
+
+<h3>Movimentação de estoque</h3>
+
+
+<style>
+
+</style>
+
+<div>
+    <div style="float:left; width:30%">
+        <table class="table">
+            <tbody>
+                <tr>
+                    <td>
+                        Material:
+                        <select @bind="@intIdMaterial">
+                            >
+
+                            @foreach (var itemMaterial in materialList)
+                            {
+                                <option value="@itemMaterial.int_id">@itemMaterial.int_id - @itemMaterial.str_descricao</option>
+                            }
+                        </select>
+
+                        <button @onclick="(()=>SelecionaMaterial(intIdMaterial))" class="btn-secundary">Filtrar</button>
+                        <button @onclick="(()=>RemoverFiltroMaterial())" class="btn-secundary">Limpar</button>
+                        <br>
+
+                        Remover:
+                        <input placeholder="Desconto estoque" type="text" class="form-control mb-md-3" @bind="@movEstoqueCad.int_qtd_desconto" @bind:event="oninput" />
+
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <button type="submit" @onclick="(()=>CadastrarMovEstoque(0))" class="btn-primary">Remover</button>
+                    </td>
+
+                    <td>
+                        <button type="submit" @onclick="(()=>CadastrarMovEstoque(1))" class="btn-primary">Adicionar</button>
+                    </td>
+
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div style="float:right; width:70%; padding-left: 10px">
+        <table border="1">
+            <thead>
+                <tr >
+                    <th>ID Mov</th>
+                    <th>Material</th>
+                    <th>Estoque anterior </th>
+                    <th>Estoque desconto</th>
+                    <th>Estoque Atual</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in movEstoqueList)
+                {
+                    <tr>
+                        <th>@item.int_id</th>
+                        <td>@item.str_material</td>
+                        <td>@item.int_qtd_anterior</td>
+                        <td>@item.int_qtd_desconto</td>
+                        <td>@item.int_qtd_atual</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+@code {
+    private bool visibleEdit { get; set; } = true;
+    private bool visibleAdd { get; set; } = false;
+    private Models.crud.MovEstoque? movEstoqueCad { get; set; } = new Models.crud.MovEstoque();
+
+    private List<Models.crud.Material>? materialList { get; set; } = new List<Models.crud.Material>();
+    private int intIdMaterial = 0;
+
+
+    private List<Models.crud.MovEstoque> movEstoqueList = new List<Models.crud.MovEstoque>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        CarregaMaterial();
+        visibleAdd = true;
+        visibleEdit = false;
+
+        using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+        {
+            movEstoqueList = new List<Models.crud.MovEstoque>();
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("sp_ConsultaMovEstoque", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add(new SqlParameter("@int_id_material", null));
+            using (SqlDataReader rdr = cmd.ExecuteReader())
+            {
+                while (rdr.Read())
+                {
+                    movEstoqueList.Add(new Models.crud.MovEstoque
+                        {
+                            int_id = (int)rdr["int_id"],
+                            str_material = (string)rdr["str_material"],
+                            int_material = (int)rdr["int_material"],
+                            int_qtd_anterior = (int)rdr["int_qtd_anterior"],
+                            int_qtd_desconto = (int)rdr["int_qtd_desconto"],
+                            int_qtd_atual = (int)rdr["int_qtd_atual"],
+                            int_estoque_incial = (int)rdr["int_estoque_incial"]
+                        });
+                }
+            }
+        }
+
+        movEstoqueCad = new Models.crud.MovEstoque();
+    }
+
+    private void CadastrarMovEstoque(int tipoMov = 0 )
+    {
+        visibleAdd = true;
+        visibleEdit = false;
+        var material = materialList?.Where(x => x.int_id == intIdMaterial).FirstOrDefault() ?? null;
+        int? estoqueAtual = EstoqueAtual(intIdMaterial);
+
+        if (estoqueAtual == null)
+            estoqueAtual = material?.int_estoque_incial ?? 0;
+
+        int? estoqueAposInsert = estoqueAtual - movEstoqueCad?.int_qtd_desconto;
+
+        if(tipoMov == 1)
+            estoqueAposInsert = estoqueAtual + movEstoqueCad?.int_qtd_desconto;
+
+        if (estoqueAtual != null)
+        {
+            using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("sp_CadastraMovEstoque", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new SqlParameter("int_id_material", material?.int_id ?? 0));
+                cmd.Parameters.Add(new SqlParameter("int_qtde_desconto", movEstoqueCad?.int_qtd_desconto ?? 0));
+                cmd.Parameters.Add(new SqlParameter("int_qtd_atual", estoqueAposInsert ?? 0));
+                cmd.Parameters.Add(new SqlParameter("int_qtd_anterior", estoqueAtual));
+                cmd.ExecuteReader();
+            }
+        }
+        OnInitializedAsync();
+    }
+
+    private void DeleteMaterial(string id)
+    {
+        visibleAdd = true;
+        visibleEdit = false;
+
+        using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+        {
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("sp_ExcluiMaterial", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add(new SqlParameter("int_id", id));
+            cmd.ExecuteReader();
+        }
+        OnInitializedAsync();
+    }
+
+
+    protected int? EstoqueAtual(int idMAterial)
+    {
+        int? estoqueAtual = null;
+        using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+        {
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("sp_ConsultaQtdeAtual", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add(new SqlParameter("int_id_material", idMAterial));
+            using (SqlDataReader rdr = cmd.ExecuteReader())
+            {
+                while (rdr.Read())
+                {
+                    estoqueAtual = (int)rdr["int_qtd_Atual"];
+                }
+            }
+            return estoqueAtual;
+        }
+    }
+
+    protected void CarregaMaterial()
+    {
+        using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+        {
+            materialList = new List<Models.crud.Material>();
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("sp_ConsultaMaterial", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            using (SqlDataReader rdr = cmd.ExecuteReader())
+            {
+                while (rdr.Read())
+                {
+                    materialList.Add(new Models.crud.Material
+                        {
+                            int_id = (int)rdr["int_id"],
+                            str_descricao = (string)rdr["str_descricao"],
+                            dec_valor = (decimal)rdr["dec_valor"],
+                            int_estoque_incial = (int)rdr["int_estoque_incial"]
+                        });
+                }
+            }
+        }
+    }
+
+    public void SelecionaMaterial( int idMaterial )
+    {
+        OnInitializedAsync();
+        movEstoqueList = movEstoqueList.Where(x => x.int_material == idMaterial).ToList();
+    }
+
+    public void RemoverFiltroMaterial()
+    {
+        OnInitializedAsync();
+    }
+
+}

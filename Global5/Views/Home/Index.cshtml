@@ -1,10 +1,20 @@
 ﻿@using Global5.Components.crud
-@{
-}
-
-
 <div>
-    <component type="typeof(Fornecedor)" render-mode="ServerPrerendered" />
+    <div style="float:left">
+        <component type="typeof(Fornecedor)" render-mode="ServerPrerendered" />
+    </div>
+    
+    <div></div>
+    
+    <div style="float:left">
+
+        <component type="typeof(Material)" render-mode="ServerPrerendered" />
+    </div>
+
+    <div style="float:left">
+        <component type="typeof(MovEstoque)" render-mode="ServerPrerendered" />
+    </div>
+
 </div>
 @section Scripts {
     <script src="_framework/blazor.server.js"></script>

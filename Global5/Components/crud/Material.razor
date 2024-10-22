@@ -2,7 +2,7 @@
 @using Global5.Controllers.Configuration
 @using System.Data
 
-<h3>Fornecedor</h3>
+<h3>Material</h3>
 
 
 <div>
@@ -11,19 +11,23 @@
             <tbody>
                 <tr>
                     <td>
-                        <input placeholder="Nome" type="text" class="form-control mb-md-3" @bind="@fornecedorCad.str_nome" @bind:event="oninput" />
-                        <input placeholder="Email" type="text" class="form-control mb-md-3" @bind="@fornecedorCad.str_email" @bind:event="oninput" />
+                        <input placeholder="Descrição" type="text" class="form-control mb-md-3" @bind="@materialCad.str_descricao" @bind:event="oninput" />
+                        <input placeholder="Valor" type="text" class="form-control mb-md-3" @bind="@materialCad.dec_valor" @bind:event="oninput" />
+                        <input placeholder="Estoque Inical" type="text" class="form-control mb-md-3" @bind="@materialCad.int_estoque_incial" @bind:event="oninput" />
+
                     </td>
                 </tr>
                 <tr>
+
                     <td>
+
                         @if (visibleAdd)
                         {
-                            <button visible="@(visibleAdd)" type="submit" @onclick="CadastrarFornecedor" class="btn-primary">Cadastrar</button>
+                            <button visible="@(visibleAdd)" type="submit" @onclick="CadastrarMaterial" class="btn-primary">Cadastrar</button>
                         }
                         else if (visibleEdit)
                         {
-                            <button visible="@(visibleEdit)" @onclick="AtualizaFornecedor" class="btn-primary">Editar</button>
+                            <button visible="@(visibleEdit)" @onclick="AtualizaMaterial" class="btn-primary">Editar</button>
                         }
 
                     </td>
@@ -36,24 +40,24 @@
             <thead>
                 <tr>
                     <th>Código</th>
-                    <th>Nome</th>
-                    <th>E-mail</th>
+                    <th>Descrição</th>
+                    <th>Valor R$</th>
+                    <th>Estoque Inicial</th>
+
                     <th>Edição</th>
                     <th>Exclusão</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in fornecedorList)
+                @foreach (var item in materialList)
                 {
                     <tr>
                         <th>@item.int_id</th>
-                        <td>@item.str_nome</td>
-                        <td>@item.str_email</td>
+                        <td>@item.str_descricao</td>
+                        <td>@item.dec_valor</td>
+                        <td>@item.int_estoque_incial</td>
                         <td> <button @onclick="(() => CarregaFornecedor(item))" class="btn-primary">Editar</button> </td>
-                        <td>
-                            <button @onclick="(() => DeleteFornecedor(item.int_id.ToString()))" class="btn-primary">Excluir</button>
-                        </td>
-
+                        <td> <button @onclick="(() => DeleteMaterial(item.int_id.ToString()))" class="btn-primary">Excluir</button> </td>
                     </tr>
                 }
             </tbody>
@@ -63,14 +67,11 @@
 </div>
 
 
-
 @code {
     private bool visibleEdit { get; set; } = true;
     private bool visibleAdd { get; set; } = false;
-
-    private string strButton { get; set; } = "Cadastrar";
-    private Models.crud.Fornecedor? fornecedorCad { get; set; } = new Models.crud.Fornecedor();
-    private List<Models.crud.Fornecedor> fornecedorList = new List<Models.crud.Fornecedor>();
+    private Models.crud.Material? materialCad { get; set; } = new Models.crud.Material();
+    private List<Models.crud.Material> materialList = new List<Models.crud.Material>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -79,29 +80,30 @@
 
         using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
         {
-            fornecedorList = new List<Models.crud.Fornecedor>();
+            materialList = new List<Models.crud.Material>();
             conn.Open();
-            SqlCommand cmd = new SqlCommand("sp_ConsultaFornecedor", conn);
+            SqlCommand cmd = new SqlCommand("sp_ConsultaMaterial", conn);
             cmd.CommandType = CommandType.StoredProcedure;
             cmd.Parameters.Add(new SqlParameter("int_id", null));
             using (SqlDataReader rdr = cmd.ExecuteReader())
             {
                 while (rdr.Read())
                 {
-                    fornecedorList.Add(new Models.crud.Fornecedor
+                    materialList.Add(new Models.crud.Material
                         {
                             int_id = (int)rdr["int_id"],
-                            str_nome = (string)rdr["str_nome"],
-                            str_email = (string)rdr["str_email"]
+                            str_descricao = (string)rdr["str_descricao"],
+                            dec_valor = (decimal)rdr["dec_valor"],
+                            int_estoque_incial = (int)rdr["int_estoque_incial"]
                         });
                 }
             }
         }
 
-        fornecedorCad = new Models.crud.Fornecedor();
+        materialCad = new Models.crud.Material();
     }
 
-    private void CadastrarFornecedor()
+    private void CadastrarMaterial()
     {
         visibleAdd = true;
         visibleEdit = false;
@@ -109,17 +111,19 @@
         using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
         {
             conn.Open();
-            SqlCommand cmd = new SqlCommand("sp_CadFornecedor", conn);
+            SqlCommand cmd = new SqlCommand("sp_CadastraMaterial", conn);
             cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.Add(new SqlParameter("str_nome", fornecedorCad?.str_nome ?? string.Empty));
-            cmd.Parameters.Add(new SqlParameter("str_email", fornecedorCad?.str_email ?? string.Empty));
+            cmd.Parameters.Add(new SqlParameter("str_descricao", materialCad?.str_descricao ?? string.Empty));
+            cmd.Parameters.Add(new SqlParameter("dec_valor", materialCad?.dec_valor.ToString() ?? "0"));
+            cmd.Parameters.Add(new SqlParameter("int_estoque_incial", materialCad?.int_estoque_incial ?? 0));
+
             cmd.ExecuteReader();
         }
 
         OnInitializedAsync();
     }
 
-    private void DeleteFornecedor(string id)
+    private void DeleteMaterial(string id)
     {
         visibleAdd = true;
         visibleEdit = false;
@@ -127,7 +131,7 @@
         using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
         {
             conn.Open();
-            SqlCommand cmd = new SqlCommand("sp_DeleteFornecedor", conn);
+            SqlCommand cmd = new SqlCommand("sp_ExcluiMaterial", conn);
             cmd.CommandType = CommandType.StoredProcedure;
             cmd.Parameters.Add(new SqlParameter("int_id", id));
             cmd.ExecuteReader();
@@ -135,31 +139,30 @@
         OnInitializedAsync();
     }
 
-    private void CarregaFornecedor(Models.crud.Fornecedor fornecedorCarrega)
+    private void CarregaFornecedor(Models.crud.Material materialCarrega)
     {
         visibleAdd = false;
         visibleEdit = true;
-        fornecedorCad = fornecedorCarrega;
+        materialCad = materialCarrega;
     }
 
-    private void AtualizaFornecedor()
+    private void AtualizaMaterial()
     {
         visibleAdd = true;
         visibleEdit = false;
 
-        if (fornecedorCad == null)
-            return;
-
         using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
         {
             conn.Open();
-            SqlCommand cmd = new SqlCommand("sp_AtualizaFornecedor", conn);
+            SqlCommand cmd = new SqlCommand("sp_AtualizaMaterial", conn);
             cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.Add(new SqlParameter("int_id", fornecedorCad?.int_id ?? 0));
-            cmd.Parameters.Add(new SqlParameter("str_nome", fornecedorCad?.str_nome ?? string.Empty));
-            cmd.Parameters.Add(new SqlParameter("str_email", fornecedorCad?.str_email ?? string.Empty));
+            cmd.Parameters.Add(new SqlParameter("int_id", materialCad?.int_id ?? 0));
+            cmd.Parameters.Add(new SqlParameter("str_descricao", materialCad?.str_descricao ?? string.Empty));
+            cmd.Parameters.Add(new SqlParameter("dec_valor", materialCad?.dec_valor ?? decimal.Parse("0")));
+            cmd.Parameters.Add(new SqlParameter("int_estoque_incial", materialCad?.int_estoque_incial ?? 0));
             cmd.ExecuteReader();
         }
         OnInitializedAsync();
     }
+
 }
