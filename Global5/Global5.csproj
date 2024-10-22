@@ -8,11 +8,13 @@
 
   <ItemGroup>
     <Folder Include="Models\error\" />
+    <Folder Include="wwwroot\img\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ADO.Net.Client.Core" Version="1.4.5" />
     <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.4.22" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
   </ItemGroup>
