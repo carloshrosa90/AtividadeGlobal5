@@ -8,6 +8,11 @@
 
 <h3>Fornecedor</h3>
 
+<style>
+.borda{
+    border: solid
+}
+</style>
 
 <div>
     <div style="float:left; width:30%">
@@ -37,25 +42,25 @@
         </table>
     </div>
     <div style="float:right; width:70%; padding-left: 10px">
-        <table border="1">
+        <table>
             <thead>
                 <tr>
-                    <th>Código</th>
-                    <th>Nome</th>
-                    <th>E-mail</th>
-                    <th>Edição</th>
-                    <th>Exclusão</th>
+                    <th class="borda">Código</th>
+                    <th class="borda">Nome</th>
+                    <th class="borda">"E-mail</th>
+                    <th class="borda">"Edição</th>
+                    <th class="borda">"Exclusão</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in fornecedorList)
                 {
                     <tr>
-                        <th>@item.int_id</th>
-                        <td>@item.str_nome</td>
-                        <td>@item.str_email</td>
-                        <td> <button @onclick="(() => CarregaFornecedor(item))" class="btn-primary">Editar</button> </td>
-                        <td>
+                        <th class="borda">@item.int_id</th>
+                        <td class="borda">@item.str_nome</td>
+                        <td class="borda">@item.str_email</td>
+                        <td class="borda"> <button @onclick="(() => CarregaFornecedor(item))" class="btn-primary">Editar</button> </td>
+                        <td class="borda">
                             <button @onclick="(() => DeleteFornecedor(item.int_id.ToString()))" class="btn-primary">Excluir</button>
                         </td>
 
@@ -64,10 +69,7 @@
             </tbody>
         </table>
     </div>
-
 </div>
-
-
 
 @code {
     private bool visibleEdit { get; set; } = true;

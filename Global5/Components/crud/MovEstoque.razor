@@ -9,7 +9,9 @@
 
 
 <style>
-
+.borda{
+    border: solid
+}
 </style>
 
 <div>
@@ -51,24 +53,24 @@
     </div>
     <div style="float:right; width:70%; padding-left: 10px">
         <table border="1">
-            <thead>
+            <thead class="borda">
                 <tr>
-                    <th>ID Mov</th>
-                    <th>Material</th>
-                    <th>Estoque anterior </th>
-                    <th>Estoque desconto</th>
-                    <th>Estoque Atual</th>
+                    <th class="borda">ID Mov</th>
+                    <th class="borda">Material</th>
+                    <th class="borda">Estoque anterior </th>
+                    <th class="borda">Estoque Alterado</th>
+                    <th class="borda">Estoque Atual</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in movEstoqueList)
                 {
                     <tr>
-                        <th>@item.int_id</th>
-                        <td>@item.str_material</td>
-                        <td>@item.int_qtd_anterior</td>
-                        <td>@item.int_qtd_desconto</td>
-                        <td>@item.int_qtd_atual</td>
+                        <td class="borda">@item.int_id</td>
+                        <td class="borda">@item.str_material</td>
+                        <td class="borda">@item.int_qtd_anterior</td>
+                        <td class="borda">@item.int_qtd_desconto</td>
+                        <td class="borda">@item.int_qtd_atual</td>
                     </tr>
                 }
             </tbody>

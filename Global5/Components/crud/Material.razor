@@ -7,6 +7,11 @@
 
 <h3>Material</h3>
 
+<style>
+    .borda {
+        border: solid
+    }
+</style>
 
 <div>
     <div style="float:left; width:30%">
@@ -43,25 +48,25 @@
         <table border="1">
             <thead>
                 <tr>
-                    <th>Código</th>
-                    <th>Descrição</th>
-                    <th>Valor R$</th>
-                    <th>Estoque Inicial</th>
+                    <th class="borda">Código</th>
+                    <th class="borda">Descrição</th>
+                    <th class="borda">Valor R$</th>
+                    <th class="borda">Estoque Inicial</th>
 
-                    <th>Edição</th>
-                    <th>Exclusão</th>
+                    <th class="borda">Edição</th>
+                    <th class="borda">Exclusão</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in materialList)
                 {
                     <tr>
-                        <th>@item.int_id</th>
-                        <td>@item.str_descricao</td>
-                        <td>@item.dec_valor</td>
-                        <td>@item.int_estoque_incial</td>
-                        <td> <button @onclick="(() => CarregaFornecedor(item))" class="btn-primary">Editar</button> </td>
-                        <td> <button @onclick="(() => DeleteMaterial(item.int_id.ToString()))" class="btn-primary">Excluir</button> </td>
+                        <td class="borda">@item.int_id</td>
+                        <td class="borda">@item.str_descricao</td>
+                        <td class="borda">@item.dec_valor</td>
+                        <td class="borda">@item.int_estoque_incial</td>
+                        <td class="borda"> <button @onclick="(() => CarregaFornecedor(item))" class="btn-primary">Editar</button> </td>
+                        <td class="borda"> <button @onclick="(() => DeleteMaterial(item.int_id.ToString()))" class="btn-primary">Excluir</button> </td>
                     </tr>
                 }
             </tbody>
