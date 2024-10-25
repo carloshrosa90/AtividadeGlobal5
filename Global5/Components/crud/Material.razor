@@ -1,6 +1,9 @@
 ﻿@using System.Data.SqlClient
 @using Global5.Controllers.Configuration
 @using System.Data
+@using System.Diagnostics
+@using iTextSharp.text
+@using iTextSharp.text.pdf
 
 <h3>Material</h3>
 
@@ -18,7 +21,6 @@
                     </td>
                 </tr>
                 <tr>
-
                     <td>
 
                         @if (visibleAdd)
@@ -29,6 +31,8 @@
                         {
                             <button visible="@(visibleEdit)" @onclick="AtualizaMaterial" class="btn-primary">Editar</button>
                         }
+                        <br>
+                        <button @onclick="(()=> GerarRelatorio())" class="btn-secondary">Relatório</button>
 
                     </td>
                 </tr>
@@ -125,18 +129,25 @@
 
     private void DeleteMaterial(string id)
     {
-        visibleAdd = true;
-        visibleEdit = false;
-
-        using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+        try
         {
-            conn.Open();
-            SqlCommand cmd = new SqlCommand("sp_ExcluiMaterial", conn);
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.Add(new SqlParameter("int_id", id));
-            cmd.ExecuteReader();
+            visibleAdd = true;
+            visibleEdit = false;
+
+            using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("sp_ExcluiMaterial", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new SqlParameter("int_id", id));
+                cmd.ExecuteReader();
+            }
+            OnInitializedAsync();
         }
-        OnInitializedAsync();
+        catch
+        {
+
+        }
     }
 
     private void CarregaFornecedor(Models.crud.Material materialCarrega)
@@ -163,6 +174,67 @@
             cmd.ExecuteReader();
         }
         OnInitializedAsync();
+    }
+
+
+    private void GerarRelatorio()
+    {
+        if (materialList.Count() > 0)
+        {
+            var pxPorMm = 72 / 25.2F;
+            var pdf = new Document(PageSize.A4, 15 * pxPorMm, 15 * pxPorMm, 15 * pxPorMm, 20 * pxPorMm);
+            var nomeArquivo = $"Material{Guid.NewGuid()}.pdf";
+            var caminhoPDF = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{nomeArquivo}");
+            var arquivo = new FileStream(caminhoPDF, FileMode.Create);
+            var writer = PdfWriter.GetInstance(pdf, arquivo);
+            pdf.Open();
+
+            var fonteBase = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, false);
+
+            //adiciona um título
+            var fonteParagrafo = new iTextSharp.text.Font(fonteBase, 32,
+                iTextSharp.text.Font.NORMAL, BaseColor.Black);
+            var titulo = new Paragraph("Relatório de material\n\n", fonteParagrafo);
+            titulo.Alignment = Element.ALIGN_LEFT;
+            titulo.SpacingAfter = 4;
+            pdf.Add(titulo);
+
+            var tabela = new PdfPTable(4);
+            float[] larguras = { 0.6f, 2f, 1.5f, 0.6f };
+            tabela.SetWidths(larguras);
+            tabela.DefaultCell.BorderWidth = 0;
+            tabela.WidthPercentage = 100;
+            var utils = new Global5.Components.lib.Util.Utils();
+            //adiciona os títulos das colunas
+            utils.CriarCelulaTexto(tabela, "ID", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Descição", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Valor", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Est. Inicial", PdfPCell.ALIGN_LEFT, true);
+
+            foreach (var p in materialList)
+            {
+                utils.CriarCelulaTexto(tabela, p.int_id.ToString("D6"), PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p?.str_descricao ?? string.Empty, PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p?.dec_valor.ToString() ?? "0", PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p?.int_estoque_incial?.ToString() ?? "0", PdfPCell.ALIGN_LEFT);
+            }
+
+            pdf.Add(tabela);
+            pdf.Close();
+            arquivo.Close();
+
+            if (File.Exists(caminhoPDF))
+            {
+                Process.Start(new ProcessStartInfo()
+                    {
+                        //Arguments = $"/c start firefox {caminhoPDF}",
+                        Arguments = $"/c start {caminhoPDF}",
+                        CreateNoWindow = true,
+                        FileName = "cmd.exe"
+                    });
+            }
+
+        }
     }
 
 }

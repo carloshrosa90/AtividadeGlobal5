@@ -1,6 +1,9 @@
 ﻿@using System.Data.SqlClient
 @using Global5.Controllers.Configuration
 @using System.Data
+@using System.Diagnostics
+@using iTextSharp.text
+@using iTextSharp.text.pdf
 
 <h3>Movimentação de estoque</h3>
 
@@ -19,6 +22,7 @@
                         <select @bind="@intIdMaterial">
                             >
 
+                            <option value=""></option>
                             @foreach (var itemMaterial in materialList)
                             {
                                 <option value="@itemMaterial.int_id">@itemMaterial.int_id - @itemMaterial.str_descricao</option>
@@ -27,22 +31,20 @@
 
                         <button @onclick="(()=>SelecionaMaterial(intIdMaterial))" class="btn-secundary">Filtrar</button>
                         <button @onclick="(()=>RemoverFiltroMaterial())" class="btn-secundary">Limpar</button>
-                        <br>
+                        <button @onclick="(()=> GerarRelatorio())" class="btn-secondary">Relatório</button>
+                        <button @onclick="(()=>CarregaMaterial(true))" class="btn-primary">Atualizar</button>
 
-                        Remover:
+                        <br>
+                        Quantidade:
                         <input placeholder="Desconto estoque" type="text" class="form-control mb-md-3" @bind="@movEstoqueCad.int_qtd_desconto" @bind:event="oninput" />
 
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <button type="submit" @onclick="(()=>CadastrarMovEstoque(0))" class="btn-primary">Remover</button>
+                        <button @onclick="(()=>CadastrarMovEstoque(0))" class="btn-primary">Remover</button>
+                        <button @onclick="(()=>CadastrarMovEstoque(1))" class="btn-primary">Adicionar</button>
                     </td>
-
-                    <td>
-                        <button type="submit" @onclick="(()=>CadastrarMovEstoque(1))" class="btn-primary">Adicionar</button>
-                    </td>
-
                 </tr>
             </tbody>
         </table>
@@ -50,7 +52,7 @@
     <div style="float:right; width:70%; padding-left: 10px">
         <table border="1">
             <thead>
-                <tr >
+                <tr>
                     <th>ID Mov</th>
                     <th>Material</th>
                     <th>Estoque anterior </th>
@@ -121,7 +123,7 @@
         movEstoqueCad = new Models.crud.MovEstoque();
     }
 
-    private void CadastrarMovEstoque(int tipoMov = 0 )
+    private void CadastrarMovEstoque(int tipoMov = 0)
     {
         visibleAdd = true;
         visibleEdit = false;
@@ -133,22 +135,28 @@
 
         int? estoqueAposInsert = estoqueAtual - movEstoqueCad?.int_qtd_desconto;
 
-        if(tipoMov == 1)
+        if (tipoMov == 1)
             estoqueAposInsert = estoqueAtual + movEstoqueCad?.int_qtd_desconto;
 
         if (estoqueAtual != null)
         {
-            using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+            try
             {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand("sp_CadastraMovEstoque", conn);
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add(new SqlParameter("int_id_material", material?.int_id ?? 0));
-                cmd.Parameters.Add(new SqlParameter("int_qtde_desconto", movEstoqueCad?.int_qtd_desconto ?? 0));
-                cmd.Parameters.Add(new SqlParameter("int_qtd_atual", estoqueAposInsert ?? 0));
-                cmd.Parameters.Add(new SqlParameter("int_qtd_anterior", estoqueAtual));
-                cmd.ExecuteReader();
+                using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
+                {
+                    conn.Open();
+                    SqlCommand cmd = new SqlCommand("sp_CadastraMovEstoque", conn);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new SqlParameter("int_id_material", material?.int_id ?? 0));
+                    cmd.Parameters.Add(new SqlParameter("int_qtde_desconto", movEstoqueCad?.int_qtd_desconto ?? 0));
+                    cmd.Parameters.Add(new SqlParameter("int_qtd_atual", estoqueAposInsert ?? 0));
+                    cmd.Parameters.Add(new SqlParameter("int_qtd_anterior", estoqueAtual));
+                    cmd.ExecuteReader();
+                }
             }
+            catch { }
+
+
         }
         OnInitializedAsync();
     }
@@ -190,7 +198,7 @@
         }
     }
 
-    protected void CarregaMaterial()
+    protected void CarregaMaterial(bool atualizaMovEstoque = false)
     {
         using (SqlConnection conn = new SqlConnection(ConfigurationBase.ConnectionString))
         {
@@ -211,10 +219,15 @@
                         });
                 }
             }
+
+            if (atualizaMovEstoque)
+                OnInitializedAsync();
         }
+
+
     }
 
-    public void SelecionaMaterial( int idMaterial )
+    public void SelecionaMaterial(int idMaterial)
     {
         OnInitializedAsync();
         movEstoqueList = movEstoqueList.Where(x => x.int_material == idMaterial).ToList();
@@ -225,4 +238,65 @@
         OnInitializedAsync();
     }
 
+
+    private void GerarRelatorio()
+    {
+        if (movEstoqueList.Count() > 0)
+        {
+            var pxPorMm = 72 / 25.2F;
+            var pdf = new Document(PageSize.A4, 15 * pxPorMm, 15 * pxPorMm, 15 * pxPorMm, 20 * pxPorMm);
+            var nomeArquivo = $"Movimentação{Guid.NewGuid()}.pdf";
+            var caminhoPDF = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{nomeArquivo}");
+            var arquivo = new FileStream(caminhoPDF, FileMode.Create);
+            var writer = PdfWriter.GetInstance(pdf, arquivo);
+            pdf.Open();
+
+            var fonteBase = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, false);
+
+            //adiciona um título
+            var fonteParagrafo = new iTextSharp.text.Font(fonteBase, 32,
+                iTextSharp.text.Font.NORMAL, BaseColor.Black);
+            var titulo = new Paragraph("Relatório de Movimentação\n\n", fonteParagrafo);
+            titulo.Alignment = Element.ALIGN_LEFT;
+            titulo.SpacingAfter = 4;
+            pdf.Add(titulo);
+
+            var tabela = new PdfPTable(5);
+            float[] larguras = { 0.6f, 2f, 0.6f, 0.6f, 0.6f };
+            tabela.SetWidths(larguras);
+            tabela.DefaultCell.BorderWidth = 0;
+            tabela.WidthPercentage = 100;
+            var utils = new Global5.Components.lib.Util.Utils();
+            //adiciona os títulos das colunas
+            utils.CriarCelulaTexto(tabela, "ID", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Material", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Q. Anterior", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Q. Alterada", PdfPCell.ALIGN_LEFT, true);
+            utils.CriarCelulaTexto(tabela, "Q. Atual", PdfPCell.ALIGN_LEFT, true);
+
+            foreach (var p in movEstoqueList)
+            {
+                utils.CriarCelulaTexto(tabela, p.int_id.ToString("D6"), PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p.str_material ?? string.Empty, PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p.int_qtd_anterior.ToString(), PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p.int_qtd_desconto.ToString(), PdfPCell.ALIGN_LEFT);
+                utils.CriarCelulaTexto(tabela, p.int_qtd_atual.ToString(), PdfPCell.ALIGN_LEFT);
+            }
+
+            pdf.Add(tabela);
+            pdf.Close();
+            arquivo.Close();
+
+            if (File.Exists(caminhoPDF))
+            {
+                Process.Start(new ProcessStartInfo()
+                    {
+                        //Arguments = $"/c start firefox {caminhoPDF}",
+                        Arguments = $"/c start {caminhoPDF}",
+                        CreateNoWindow = true,
+                        FileName = "cmd.exe"
+                    });
+            }
+        }
+    }
 }
